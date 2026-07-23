@@ -1,0 +1,67 @@
+version: "3.9"
+services:
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      #- "--certificatesresolvers.mytlschallenge.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.mytlschallenge.acme.email=${EMAIL}"
+      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--providers.file.directory=/config"
+      - "--providers.file.watch=true"
+    # ports:
+    #   - "8080:8080"
+    networks:
+      nestlab-proxy:
+        ipv4_address: ${TRAEFIK_PROXY_IP}
+      nestlab-sys:
+        ipv4_address: ${TRAEFIK_SYS_IP}
+      nestlab-lan:
+        ipv4_address: ${TRAEFIK_LAN_IP}
+        mac_address: "${TRAEFIK_LAN_MAC}"
+      nestlab-srv:
+        ipv4_address: ${TRAEFIK_SRV_IP}
+        mac_address: "${TRAEFIK_SRV_MAC}"
+    volumes:
+      - ${APPDATA_ROOT}/traefik/letsencrypt:/letsencrypt
+      - ${APPDATA_ROOT}/traefik/config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      
+  whoami:
+    image: "containous/whoami"
+    container_name: "whoami"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.${ROOT_URL}`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.whoami.middlewares=default-headers@file,local-only@file"
+      # - "traefik.http.routers.whoami.middlewares=default-headers@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    networks:
+      nestlab-proxy:
+
+networks:
+  nestlab-proxy:
+    external: true
+    name: ${NET_PROXY}
+  nestlab-sys:
+    external: true
+    name: ${NET_SYS}
+
+  nestlab-lan:
+    external: true
+    name: ${NET_LAN}
+  nestlab-srv:
+    external: true
+    name: ${NET_SRV}

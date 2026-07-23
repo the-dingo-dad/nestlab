@@ -1,0 +1,253 @@
+version: "3.9"
+
+
+x-common-env: &common-env
+  PUID:  ${PUID}
+  PGID:  ${PGID}
+  TZ:    ${TZ}
+  UMASK: ${UMASK}
+
+
+services:
+  # radarr containers (hd and uhd)
+  radarr-hd:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr-hd
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:7878]
+      - net.unraid.docker.description=Radarr HD - Movie collection manager for HD content
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/radarr-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr-hd.rule=Host(`radarr-hd.${ROOT_URL}`)"
+      - "traefik.http.services.radarr-hd.loadbalancer.server.port=7878"
+      - "traefik.http.routers.radarr-hd.entrypoints=websecure"
+      - "traefik.http.routers.radarr-hd.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.radarr-hd.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/radarr-hd:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 7878:7878
+    depends_on:
+      - radarr-uhd
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  radarr-uhd:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr-uhd
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:7879]
+      - net.unraid.docker.description=Radarr UHD - Movie collection manager for UHD content
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/radarr-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr-uhd.rule=Host(`radarr-uhd.${ROOT_URL}`)"
+      - "traefik.http.services.radarr-uhd.loadbalancer.server.port=7878"
+      - "traefik.http.routers.radarr-uhd.entrypoints=websecure"
+      - "traefik.http.routers.radarr-uhd.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.radarr-uhd.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/radarr-uhd:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 7879:7878
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  # sonarr containers (hd and uhd)
+  sonarr-hd:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr-hd
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8989]
+      - net.unraid.docker.description=Sonarr HD - TV collection manager for HD content
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sonarr-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr-hd.rule=Host(`sonarr-hd.${ROOT_URL}`)"
+      - "traefik.http.services.sonarr-hd.loadbalancer.server.port=8989"
+      - "traefik.http.routers.sonarr-hd.entrypoints=websecure"
+      - "traefik.http.routers.sonarr-hd.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.sonarr-hd.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/sonarr-hd:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 8989:8989
+    depends_on:
+      - sonarr-uhd
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  sonarr-uhd:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr-uhd
+    environment:
+      <<: *common-env
+    volumes:
+      - ${APPDATA_ROOT}/sonarr-uhd:/config
+      - ${DATA_ROOT}:/data
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8990]
+      - net.unraid.docker.description=Sonarr UHD - TV collection manager for UHD content
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sonarr-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr-uhd.rule=Host(`sonarr-uhd.${ROOT_URL}`)"
+      - "traefik.http.services.sonarr-uhd.loadbalancer.server.port=8989"
+      - "traefik.http.routers.sonarr-uhd.entrypoints=websecure"
+      - "traefik.http.routers.sonarr-uhd.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.sonarr-uhd.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    ports:
+      - 8990:8989
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  # bazarr containers (hd and uhd) uhd not required?
+  bazarr-hd:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr-hd
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:6767]
+      - net.unraid.docker.description=Bazarr - Subtitle management for HD content
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bazarr-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr-hd.rule=Host(`bazarr-hd.${ROOT_URL}`)"
+      - "traefik.http.services.bazarr-hd.loadbalancer.server.port=6767"
+      - "traefik.http.routers.bazarr-hd.entrypoints=websecure"
+      - "traefik.http.routers.bazarr-hd.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.bazarr-hd.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/bazarr-hd:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 6767:6767
+    depends_on:
+      - radarr-hd
+      - sonarr-hd
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  # bazarr-uhd:
+  #   image: lscr.io/linuxserver/bazarr:latest
+  #   container_name: bazarr-uhd
+  #   environment:
+  #     <<: *common-env
+  #   labels:
+  #     - net.unraid.docker.webui=http://[IP]:[PORT:6768]
+  #     - net.unraid.docker.description=Bazarr - Subtitle management for UHD content
+  #     - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bazarr-logo.png
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.bazarr-uhd.rule=Host(`bazarr-uhd.${ROOT_URL}`)"
+  #     - "traefik.http.services.bazarr-uhd.loadbalancer.server.port=6767"
+  #     - "traefik.http.routers.bazarr-uhd.entrypoints=websecure"
+  #     - "traefik.http.routers.bazarr-uhd.tls.certresolver=mytlschallenge"
+  #     - "traefik.http.routers.bazarr-uhd.middlewares=default-headers@file,local-only@file"
+  #     - "traefik.docker.network=${NET_PROXY}"
+  #   volumes:
+  #     - ${APPDATA_ROOT}/bazarr-uhd:/config
+  #     - ${DATA_ROOT}:/data
+  #   ports:
+  #     - 6768:6767
+  #   depends_on:
+  #     - nestlab-proxy
+  #     - nestlab-download
+  #     - nestlab-arr
+  #   networks:
+  #     - nestlab-arr
+  #     - nestlab-download
+  #   restart: unless-stopped
+
+  # prowlarr
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:9696]
+      - net.unraid.docker.description=Prowlarr - Indexer and release management
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/prowlarr-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${ROOT_URL}`)"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.prowlarr.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/prowlarr:/config
+    ports:
+      - 9696:9696
+    depends_on:
+      - radarr-hd
+      - radarr-uhd
+      - sonarr-hd
+      - sonarr-uhd
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+    
+  # seerr
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    environment:
+      <<: *common-env
+      PORT: "5055"
+      LOG_LEVEL: "DEBUG"
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:5055]
+      - net.unraid.docker.description=Seerr - Media request manager
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/nwithan8/unraid_templates/master/images/seerr-icon.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.seerr.rule=Host(`seerr.${ROOT_URL}`)"
+      - "traefik.http.services.seerr.loadbalancer.server.port=5055"
+      - "traefik.http.routers.seerr.entrypoints=websecure"
+      - "traefik.http.routers.seerr.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.seerr.middlewares=default-headers@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/seerr:/app/config
+      - ${APPDATA_ROOT}/seerr/logs:/app/config/logs
+      - ${DATA_ROOT}:/data
+    ports:
+      - 5055:5055
+    depends_on:
+      - radarr-hd
+      - radarr-uhd
+      - sonarr-hd
+      - sonarr-uhd
+    networks:
+      - nestlab-proxy
+    restart: unless-stopped
+
+networks:
+  nestlab-proxy:
+    external: true
+    name: ${NET_PROXY}
+  nestlab-download:
+    external: true
+    name: ${NET_DOWNLOAD}

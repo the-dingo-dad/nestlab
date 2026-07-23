@@ -1,6 +1,36 @@
-composer.phar
-/vendor/
+# Environment files (may contain secrets)
+.env
+.env.local
+.env.*.local
 
-# Commit your application's lock file https://getcomposer.org/doc/01-basic-usage.md#commit-your-composer-lock-file-to-version-control
-# You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
-# composer.lock
+# Docker Compose overrides and local compose files
+docker-compose.override.yml
+docker-compose.*.local.yml
+
+# Docker stack files (deployments)
+docker-stack.yml
+docker-stack-*.yml
+stack.yml
+
+# Build and runtime artifacts
+build/
+tmp/
+logs/
+*.log
+
+# Docker artifacts
+.docker/
+*.tar
+*.tgz
+
+# Docker volumes / persisted data directories
+data/
+volumes/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/

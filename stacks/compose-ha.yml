@@ -1,0 +1,141 @@
+version: "3.9"
+
+x-common-env: &common-env
+  PUID:  ${PUID}
+  PGID:  ${PGID}
+  TZ:    ${TZ}
+  UMASK: ${UMASK}
+
+services:
+  # Home-Assistant
+  homeassistant:
+    image: lscr.io/linuxserver/homeassistant:latest
+    container_name: homeassistant
+    environment:
+      <<: *common-env
+    ports:
+      - 8123:8123
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8123]
+      - net.unraid.docker.description=Home Assistant - Smart Home Automation
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/balloob/unraid-docker-templates/master/balloob/home-assistant-icon.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.ha.rule=Host(`ha.${ROOT_URL}`)"
+      - "traefik.http.services.ha.loadbalancer.server.port=8123"
+      - "traefik.http.routers.ha.entrypoints=websecure"
+      - "traefik.http.routers.ha.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.ha.middlewares=default-headers@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/homeassistant:/config
+    networks:
+      nestlab-ha:
+        ipv4_address: ${HOMEASSISTANT_HA_IP}
+        gw_priority: 80
+      nestlab-proxy:
+        gw_priority: 50
+      nestlab-iot:
+        ipv4_address: ${HOMEASSISTANT_IOT_IP}
+        mac_address: "${HOMEASSISTANT_IOT_MAC}"
+        gw_priority: 10
+      nestlab-mqtt:
+        gw_priority: 100
+    restart: unless-stopped
+
+  # AppDaemon
+  appdaemon:
+    image: acockburn/appdaemon:latest
+    container_name: appdaemon
+    environment:
+      <<: *common-env
+      HA_URL: "http://homeassistant:8123"
+      TOKEN: ${HA_TOKEN}
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:5050]
+      - net.unraid.docker.description=AppDaemon
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/CorneliousJD/Docker-Templates/master/icons/appdaemon.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.appdaemon.rule=Host(`appdaemon.${ROOT_URL}`)"
+      - "traefik.http.services.appdaemon.loadbalancer.server.port=5050"
+      - "traefik.http.routers.appdaemon.entrypoints=websecure"
+      - "traefik.http.routers.appdaemon.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.appdaemon.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    ports:
+      - 5050:5050
+    volumes:
+      - ${APPDATA_ROOT}/appdaemon:/conf
+    networks:
+      nestlab-ha:
+        ipv4_address: ${APPDAEMON_HA_IP}
+        gw_priority: 100
+      nestlab-proxy:
+        gw_priority: 50
+    depends_on:
+      - homeassistant
+    restart: unless-stopped
+
+  ecowitt2mqtt:
+    image: bachya/ecowitt2mqtt:latest
+    container_name: ecowitt2mqtt
+    environment:
+      ECOWITT2MQTT_MQTT_BROKER: mosquitto
+      ECOWITT2MQTT_MQTT_PORT: "1883"
+      ECOWITT2MQTT_MQTT_TOPIC: "ecowitt2mqtt/data"
+      ECOWITT2MQTT_HASS_DISCOVERY: "true"
+      ECOWITT2MQTT_MQTT_USERNAME: ${MQTT_USERNAME}
+      ECOWITT2MQTT_MQTT_PASSWORD: ${MQTT_PASSWORD}
+    networks:
+      nestlab-mqtt:
+        gw_priority: 10
+      nestlab-iot:
+        ipv4_address: ${ECOWITT_IOT_IP}
+        mac_address: "${ECOWITT_IOT_MAC}"
+    restart: unless-stopped
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    volumes:
+      - ${APPDATA_ROOT}/zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      - ${ZIGBEE_DEVICE}:/dev/ttyUSB0
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8090]
+      - net.unraid.docker.description=Zigbee2MQTT - Zigbee to MQTT Bridge
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/digiblur/unraid-docker-templates/master/images/zigbee2mqtt.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.z2m.rule=Host(`z2m.${ROOT_URL}`)"
+      - "traefik.http.services.z2m.loadbalancer.server.port=8080"
+      - "traefik.http.routers.z2m.entrypoints=websecure"
+      - "traefik.http.routers.z2m.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.z2m.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    ports:
+      - 8090:8080
+    networks:
+      - nestlab-mqtt
+      - nestlab-proxy
+
+
+networks:
+  nestlab-proxy:
+    external: true
+    name: ${NET_PROXY}
+  nestlab-mqtt:
+    external: true
+    name: ${NET_MQTT}
+  nestlab-ha:
+    name: ${NET_HA}
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${HA_NET_SUBNET}
+  nestlab-iot:
+    external: true
+    name: ${NET_IOT}

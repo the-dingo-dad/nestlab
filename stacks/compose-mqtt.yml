@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:    
+  # Mosquitto MQQT Broker
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    labels:
+      - net.unraid.docker.description=Mosquitto MQTT Broker
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/simonsickle/unraid-templates/main/mosquitto/logo.png
+    volumes:
+      - ${APPDATA_ROOT}/mosquitto/config:/mosquitto/config
+      - ${APPDATA_ROOT}/mosquitto/data:/mosquitto/data
+      - ${APPDATA_ROOT}/mosquitto/log:/mosquitto/log
+    networks:
+      - nestlab-mqtt
+    restart: unless-stopped
+
+
+networks:
+  nestlab-mqtt:
+    external: true
+    name: ${NET_MQTT}

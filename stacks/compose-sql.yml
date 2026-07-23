@@ -1,0 +1,55 @@
+name: nestlab-tsdb-stack
+
+services:
+  timescaledb-prod:
+    image: timescale/timescaledb:2.15.3-pg16
+    container_name: tsdb-prod-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - /mnt/cache/pgdata/tsdb-prod:/var/lib/postgresql/data
+      # Runs once on first init (empty data dir): enables the TimescaleDB extension.
+      - ${APPDATA_ROOT}/tsdb-prod/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nestlab-sql
+
+  telegraf:
+    image: telegraf:1.31-alpine
+    container_name: tsdb-telegraf
+    restart: unless-stopped
+    depends_on:
+      timescaledb-prod:
+        condition: service_healthy
+    environment:
+      # Substituted into telegraf.conf. Writes to the prod instance.
+      POSTGRES_HOST: timescaledb-prod
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      MQTT_URL: ${MQTT_URL}
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      MQTT_TOPICS: ${MQTT_TOPICS}
+    volumes:
+      - ${APPDATA_ROOT}/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    networks:
+      - nestlab-sql          # reaches timescaledb-prod
+      - nestlab-mqtt    # reaches the mosquitto broker
+
+networks:
+  nestlab-sql:
+    external: true
+    name: ${NET_SQL}
+  nestlab-mqtt:
+    external: true
+    name: ${NET_MQTT}

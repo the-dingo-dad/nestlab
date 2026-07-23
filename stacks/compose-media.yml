@@ -1,0 +1,45 @@
+version: "3.9"
+
+x-common-env: &common-env
+  PUID:  ${PUID}
+  PGID:  ${PGID}
+  TZ:    ${TZ}
+  UMASK: ${UMASK}
+
+services:
+  # Jellyfin
+  jelly:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jelly
+    environment:
+      <<: *common-env
+      JELLYFIN_PublishedServerUrl: https://jelly.${ROOT_URL}
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8096]
+      - net.unraid.docker.description=Jellyfin - Media server
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/jellyfin-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.jelly.rule=Host(`jelly.${ROOT_URL}`)"
+      - "traefik.http.services.jelly.loadbalancer.server.port=8096"
+      - "traefik.http.routers.jelly.entrypoints=websecure"
+      - "traefik.http.routers.jelly.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.jelly.middlewares=default-headers@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    ports:
+      - 8096:8096
+      - 7359:7359/udp
+      - 1900:1900/udp
+    volumes:
+      - ${APPDATA_ROOT}/jellyfin:/config
+      - ${SCRATCH_ROOT}/jellyfin:/config/cache
+      - ${DATA_ROOT}/media:/data/media
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      - nestlab-proxy
+
+
+networks:
+  nestlab-proxy:
+    external: true
+    name: ${NET_PROXY}

@@ -1,0 +1,73 @@
+version: "3.9"
+
+x-common-env: &common-env
+  PUID:  ${PUID}
+  PGID:  ${PGID}
+  TZ:    ${TZ}
+  UMASK: ${UMASK}
+
+services:
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8080]
+      - net.unraid.docker.description=SABnzbd - Usenet download manager
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/sabnzbd-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.${ROOT_URL}`)"
+      - "traefik.http.services.sabnzbd.loadbalancer.server.port=8080"
+      - "traefik.http.routers.sabnzbd.entrypoints=websecure"
+      - "traefik.http.routers.sabnzbd.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.sabnzbd.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/sabnzbd:/config
+      - ${DATA_ROOT}/usenet:/data/usenet
+    ports:
+      - 8080:8080
+    networks:
+      - nestlab-download
+      - nestlab-proxy
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      <<: *common-env
+      webui_port: 8081
+      torrenting_port: 6881
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8081]
+      - net.unraid.docker.description=qbittorrent - BitTorrent client
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/qbittorrent-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.${ROOT_URL}`)"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8081"
+      - "traefik.http.routers.qbittorrent.entrypoints=websecure"
+      - "traefik.http.routers.qbittorrent.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.qbittorrent.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/qbittorrent:/config
+      - ${DATA_ROOT}/torrents:/data/torrents
+    ports:
+      - 8081:8081
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - nestlab-download
+      - nestlab-proxy
+    restart: unless-stopped
+
+
+networks:
+  nestlab-proxy:
+    external: true
+    name: ${NET_PROXY}
+  nestlab-download:
+    external: true
+    name: ${NET_DOWNLOAD}
