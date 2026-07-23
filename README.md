@@ -62,7 +62,9 @@ Everything hangs off a consistent `nestlab-*` network naming scheme. Networks co
 
 - `nestlab-ha` — an internal-only network for Home Assistant's private chatter.
 
-Because the external networks live *outside* Compose, they have to exist before anything comes up. That's what [`stacks/migrate-networks.sh`](stacks/migrate-networks.sh) is for — it (re)creates all of them from the values in `.env`.
+Because the external networks live *outside* Compose, they have to exist before anything comes up — create them once on the host with `docker network create` (bridges for proxy/download/mqtt/sys/sql, macvlan for lan/srv/iot) using the subnets/parents from `.env`.
+
+> ⚠️ macvlan parent gotcha: the parent is the interface that actually carries the VLAN. `sbh-home` (VLAN 10) is **untagged on `br0`**, so `nestlab-lan` uses `parent=br0` — *not* `br0.10`. The tagged VLANs (`services`=20, `iot`=30) use `br0.20` / `br0.30`.
 
 ---
 
@@ -96,8 +98,10 @@ cd nestlab/stacks
 cp .env.template .env
 nano .env
 
-# 3. Create the external networks (bridges + macvlans) from your .env
-bash migrate-networks.sh          # or run the docker network create lines by hand
+# 3. Create the external networks (bridges + macvlans) on the host — once.
+#    e.g. docker network create -d bridge  --subnet "$PROXY_SUBNET" --gateway "$PROXY_GATEWAY" nestlab-proxy
+#         docker network create -d macvlan -o parent=br0 --subnet 192.168.10.0/24 --gateway 192.168.10.1 nestlab-lan
+#    (repeat for the rest — see the "Networking" table for subnets/parents)
 
 # 4. Bring the stacks up
 for f in compose-*.yml; do docker compose -f "$f" up -d; done
@@ -118,7 +122,6 @@ nestlab/
 └── stacks/
     ├── .env.template           # blueprint (committed, no secrets)
     ├── .env                    # real values (git-ignored)
-    ├── migrate-networks.sh     # (re)creates the external networks from .env
     ├── compose-proxy.yml       # Traefik + whoami
     ├── compose-arr.yml         # Radarr / Sonarr / Bazarr / Prowlarr / Seerr
     ├── compose-downloaders.yml # SABnzbd / qBittorrent
