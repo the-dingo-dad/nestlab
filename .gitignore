@@ -34,3 +34,6 @@ Thumbs.db
 # IDE/editor
 .vscode/
 .idea/
+
+# AI Junk
+.claude/
