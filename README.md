@@ -22,7 +22,7 @@ It began, as these things so often do, innocently.
 
 ## 🧱 What's in the box
 
-Each stack is a self-contained `docker-compose.yml` under [`stacks/`](stacks/), deployed independently.
+Each stack lives in its own sub-folder under [`stacks/`](stacks/), with a self-contained `docker-compose.yaml`, deployed independently.
 
 | Stack | Services | What it does |
 |-------|----------|--------------|
@@ -72,7 +72,7 @@ Because the external networks live *outside* Compose, they have to exist before 
 
 There is **one** place hardcoded values are allowed to live, and it is `.env`. Network names, subnets, gateways, macvlan parents, static IPs, MACs, container UIDs, paths, secrets — all of it. The compose files are pure structure; the `.env` is all the specifics.
 
-[`stacks/.env.template`](stacks/.env.template) is the committed, secret-free blueprint. Copy it to `.env`, fill in the blanks, and you're off. The real `.env` is **git-ignored** and never leaves the host — so keep your own backup of it somewhere safe.
+[`stacks/.env.template`](stacks/.env.template) is the committed, secret-free blueprint. Copy it to `stacks/.env`, fill in the blanks, then **symlink it into each stack folder** (`stacks/<name>/.env → ../.env`) so every compose file reads the exact same one — one real file, seven symlinks, zero drift. The real `.env` is **git-ignored** (as are the symlinks) and never leaves the host — so keep your own backup of it somewhere safe.
 
 Broad strokes of what lives in there:
 
@@ -98,18 +98,21 @@ cd nestlab/stacks
 cp .env.template .env
 nano .env
 
-# 3. Create the external networks (bridges + macvlans) on the host — once.
+# 3. Symlink the one .env into every stack folder so each compose picks it up
+for d in */; do ln -sf ../.env "${d}.env"; done
+
+# 4. Create the external networks (bridges + macvlans) on the host — once.
 #    e.g. docker network create -d bridge  --subnet "$PROXY_SUBNET" --gateway "$PROXY_GATEWAY" nestlab-proxy
 #         docker network create -d macvlan -o parent=br0 --subnet 192.168.10.0/24 --gateway 192.168.10.1 nestlab-lan
 #    (repeat for the rest — see the "Networking" table for subnets/parents)
 
-# 4. Bring the stacks up
-for f in compose-*.yml; do docker compose -f "$f" up -d; done
+# 5. Bring the stacks up — one folder at a time, each reads its symlinked .env
+for d in */; do (cd "$d" && docker compose up -d); done
 ```
 
 Updating later is just `git pull` and re-running the `up -d` loop — Compose only recreates containers whose config actually changed.
 
-> Deploying via **Portainer** instead of the CLI? Point it at each `compose-*.yml`, supply the same `.env`, and make sure the external networks already exist first — Portainer won't create them for you either.
+> Deploying via **Portainer** instead of the CLI? Point it at each stack folder's `docker-compose.yaml` (under `stacks/<name>/`), make sure the symlinked `.env` is in place, and check the external networks already exist first — Portainer won't create them for you either.
 
 ---
 
@@ -120,16 +123,18 @@ nestlab/
 ├── README.md
 ├── LICENSE
 └── stacks/
-    ├── .env.template           # blueprint (committed, no secrets)
-    ├── .env                    # real values (git-ignored)
-    ├── compose-proxy.yml       # Traefik + whoami
-    ├── compose-arr.yml         # Radarr / Sonarr / Bazarr / Prowlarr / Seerr
-    ├── compose-downloaders.yml # SABnzbd / qBittorrent
-    ├── compose-media.yml       # Jellyfin
-    ├── compose-ha.yml          # Home Assistant & friends
-    ├── compose-mqtt.yml        # Mosquitto
-    └── compose-sql.yml         # TimescaleDB + Telegraf
+    ├── .env.template                    # blueprint (committed, no secrets)
+    ├── .env                             # real values (git-ignored), symlinked into each stack folder
+    ├── proxy/docker-compose.yaml        # Traefik + whoami
+    ├── arr/docker-compose.yaml          # Radarr / Sonarr / Bazarr / Prowlarr / Seerr
+    ├── downloaders/docker-compose.yaml  # SABnzbd / qBittorrent
+    ├── media/docker-compose.yaml        # Jellyfin
+    ├── ha/docker-compose.yaml           # Home Assistant & friends
+    ├── mqtt/docker-compose.yaml         # Mosquitto
+    └── sql/docker-compose.yaml          # TimescaleDB + Telegraf
 ```
+
+Each stack is one folder — its `docker-compose.yaml` sits inside alongside a symlink back to the shared `stacks/.env`, and it's deployed on its own.
 
 ---
 
@@ -154,7 +159,7 @@ Most of the fleet is stable and doing its job. The **sql** stack is the exceptio
 Keep it boring and consistent so future-you doesn't have to think:
 
 - **Networks:** `nestlab-<role>` (`nestlab-proxy`, `nestlab-mqtt`, …)
-- **Stacks:** `compose-<domain>.yml` (`compose-arr.yml`, `compose-ha.yml`, …)
+- **Stacks:** one folder per domain under `stacks/`, each holding a `docker-compose.yaml` (`stacks/arr/`, `stacks/ha/`, …)
 - **Env vars:** `UPPER_SNAKE_CASE`, grouped by purpose with comment headers
 
 ---
