@@ -55,7 +55,7 @@ services:
       - ${APPDATA_ROOT}/qbittorrent:/config
       - ${DATA_ROOT}/torrents:/data/torrents
     ports:
-      - 8081:8081
+      - 8081:8080
       - 6881:6881
       - 6881:6881/udp
     networks:
