@@ -103,16 +103,18 @@ services:
 
   # komga - western-comics-first reader. Stronger ComicVine metadata scraping for
   # floppies, which is why it runs alongside Kavita rather than collapsing into it.
-  # Library points at media/comics.
+  # Library points at media/comics. NOTE: LinuxServer does NOT ship komga, so this uses
+  # the official gotson image (ghcr). It doesn't read PUID/PGID/UMASK, so it's pinned to
+  # ${PUID}:${PGID} with `user:` (no common-env anchor) to keep ownership consistent.
   komga:
-    image: lscr.io/linuxserver/komga:latest
+    image: ghcr.io/gotson/komga:latest
     container_name: komga
+    user: "${PUID}:${PGID}"
     environment:
-      <<: *common-env
+      TZ: ${TZ}
     labels:
       - net.unraid.docker.webui=http://[IP]:[PORT:25600]
       - net.unraid.docker.description=Komga - Comics / western floppies reader
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/komga-logo.png
       - "traefik.enable=true"
       - "traefik.http.routers.komga.rule=Host(`komga.${ROOT_URL}`)"
       - "traefik.http.services.komga.loadbalancer.server.port=25600"
