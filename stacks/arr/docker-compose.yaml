@@ -384,11 +384,7 @@ services:
       - nestlab-proxy
     restart: unless-stopped
 
-  # rreading-glasses - self-hosted metadata proxy for the Bookshelf instances,
-  # replacing the shared/slow hardcover.bookinfo.pro. No web UI: Bookshelf reaches it
-  # at http://rreading-glasses:8788 (set as Metadata Source in each Bookshelf's dev
-  # settings). Needs a Hardcover token (RRG_HARDCOVER_AUTH, expires yearly Jan 1) and
-  # its own Postgres cache (sidecar below).
+  # rreading-glasses
   rreading-glasses:
     image: blampe/rreading-glasses:hardcover
     container_name: rreading-glasses
@@ -398,40 +394,39 @@ services:
       - --verbose
     environment:
       HARDCOVER_AUTH:    ${RRG_HARDCOVER_AUTH}
-      POSTGRES_HOST:     rreading-glasses-db
+      POSTGRES_HOST:     arr-db
       POSTGRES_DATABASE: rreading-glasses
-      POSTGRES_USER:     rreading-glasses
-      POSTGRES_PASSWORD: ${RRG_POSTGRES_PASSWORD}
+      POSTGRES_USER:     arr
+      POSTGRES_PASSWORD: ${ARR_DB_PASSWORD}
     labels:
       - net.unraid.docker.description=rreading-glasses - Self-hosted book metadata proxy for Bookshelf
-    mem_limit: 128m
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/ds-sebastian/unraid-templates/refs/heads/main/icons/rReadingGlasses.png
     depends_on:
-      rreading-glasses-db:
+      arr-db:
         condition: service_healthy
     networks:
       - nestlab-proxy
-      - rreading-glasses-net
+      - arr-db-net
     restart: unless-stopped
 
-  # rreading-glasses-db - Postgres cache used only by rreading-glasses. Internal-only
-  # network, no host port. Creates its DB from these env vars on first run.
-  rreading-glasses-db:
+  # arr-db
+  arr-db:
     image: postgres:17
-    container_name: rreading-glasses-db
-    hostname: rreading-glasses-db
+    container_name: arr-db
+    hostname: arr-db
     environment:
-      POSTGRES_USER:     rreading-glasses
-      POSTGRES_PASSWORD: ${RRG_POSTGRES_PASSWORD}
+      POSTGRES_USER:     arr
+      POSTGRES_PASSWORD: ${ARR_DB_PASSWORD}
       POSTGRES_DB:       rreading-glasses
     volumes:
-      - ${APPDATA_ROOT}/rreading-glasses-db:/var/lib/postgresql/data
+      - ${APPDATA_ROOT}/arr-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rreading-glasses"]
+      test: ["CMD-SHELL", "pg_isready -U arr"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - rreading-glasses-net
+      - arr-db-net
     restart: unless-stopped
 
 networks:
@@ -441,6 +436,6 @@ networks:
   nestlab-download:
     external: true
     name: ${NET_DOWNLOAD}
-  rreading-glasses-net:
+  arr-db-net:
     driver: bridge
     internal: true
