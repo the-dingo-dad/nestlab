@@ -40,20 +40,23 @@ services:
 
   # ── reading & listening servers ─────────────────────────────────────────────
   # audiobookshelf - the everyday audiobook + podcast + ebook library, with the
-  # nicest mobile apps. The LSIO image listens on 80 internally. It does NOT sync
-  # position between the ebook and the audiobook of a title (each format is a
-  # separate item with separate progress) - that gap is exactly what Storyteller
-  # fills, so the two are complementary: ABS for general listening + breadth
+  # nicest mobile apps. NOTE: LinuxServer does NOT ship audiobookshelf, so this uses
+  # the official advplyr image (listens on 80 internally, 13378 by convention on the
+  # host). It does NOT read PUID/PGID/UMASK, so it's pinned to ${PUID}:${PGID} with
+  # `user:` (no common-env anchor) to keep file ownership consistent with the media
+  # tree. It does NOT sync position between the ebook and the audiobook of a title
+  # (each format is a separate item with separate progress) - that gap is exactly what
+  # Storyteller fills, so the two are complementary: ABS for general listening + breadth
   # (podcasts, single-format titles), Storyteller for read<->listen titles.
   audiobookshelf:
-    image: lscr.io/linuxserver/audiobookshelf:latest
+    image: ghcr.io/advplyr/audiobookshelf:latest
     container_name: audiobookshelf
+    user: "${PUID}:${PGID}"
     environment:
-      <<: *common-env
+      TZ: ${TZ}
     labels:
       - net.unraid.docker.webui=http://[IP]:[PORT:13378]
       - net.unraid.docker.description=Audiobookshelf - Audiobook, podcast & ebook server
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/audiobookshelf-logo.png
       - "traefik.enable=true"
       - "traefik.http.routers.audiobookshelf.rule=Host(`audiobookshelf.${ROOT_URL}`)"
       - "traefik.http.services.audiobookshelf.loadbalancer.server.port=80"
