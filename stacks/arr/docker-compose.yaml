@@ -149,35 +149,35 @@ services:
       - nestlab-download
     restart: unless-stopped
 
-  # bazarr-uhd:
-  #   image: lscr.io/linuxserver/bazarr:latest
-  #   container_name: bazarr-uhd
-  #   environment:
-  #     <<: *common-env
-  #   labels:
-  #     - net.unraid.docker.webui=http://[IP]:[PORT:6768]
-  #     - net.unraid.docker.description=Bazarr - Subtitle management for UHD content
-  #     - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bazarr-logo.png
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.bazarr-uhd.rule=Host(`bazarr-uhd.${ROOT_URL}`)"
-  #     - "traefik.http.services.bazarr-uhd.loadbalancer.server.port=6767"
-  #     - "traefik.http.routers.bazarr-uhd.entrypoints=websecure"
-  #     - "traefik.http.routers.bazarr-uhd.tls.certresolver=mytlschallenge"
-  #     - "traefik.http.routers.bazarr-uhd.middlewares=default-headers@file,local-only@file"
-  #     - "traefik.docker.network=${NET_PROXY}"
-  #   volumes:
-  #     - ${APPDATA_ROOT}/bazarr-uhd:/config
-  #     - ${DATA_ROOT}:/data
-  #   ports:
-  #     - 6768:6767
-  #   depends_on:
-  #     - nestlab-proxy
-  #     - nestlab-download
-  #     - nestlab-arr
-  #   networks:
-  #     - nestlab-arr
-  #     - nestlab-download
-  #   restart: unless-stopped
+  bazarr-uhd:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr-uhd
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:6768]
+      - net.unraid.docker.description=Bazarr - Subtitle management for UHD content
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/bazarr-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr-uhd.rule=Host(`bazarr-uhd.${ROOT_URL}`)"
+      - "traefik.http.services.bazarr-uhd.loadbalancer.server.port=6767"
+      - "traefik.http.routers.bazarr-uhd.entrypoints=websecure"
+      - "traefik.http.routers.bazarr-uhd.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.bazarr-uhd.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/bazarr-uhd:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 6768:6767
+    depends_on:
+      - nestlab-proxy
+      - nestlab-download
+      - nestlab-arr
+    networks:
+      - nestlab-arr
+      - nestlab-download
+    restart: unless-stopped
 
   # prowlarr
   prowlarr:
