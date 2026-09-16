@@ -171,8 +171,8 @@ services:
     ports:
       - 6768:6767
     depends_on:
-      - radarr-hd
-      - sonarr-hd
+      - radarr-uhd
+      - sonarr-uhd
     networks:
       - nestlab-proxy
       - nestlab-download
