@@ -1,4 +1,4 @@
-version: "3.9"
+name: arr
 
 
 x-common-env: &common-env
@@ -209,7 +209,7 @@ services:
       - nestlab-proxy
       - nestlab-download
     restart: unless-stopped
-    
+
   # seerr
   seerr:
     image: ghcr.io/seerr-team/seerr:latest
@@ -242,6 +242,44 @@ services:
       - sonarr-uhd
     networks:
       - nestlab-proxy
+    restart: unless-stopped
+
+  # clonarr - keeps the *arrs graded consistently by syncing TRaSH-Guides quality
+  # profiles + custom formats into them, so Remuxes / 3D are excluded by the profile
+  # instead of being fixed by hand (issue #5). It's not an LSIO image but it does
+  # honour PUID/PGID/TZ, so those are set explicitly (no UMASK -> no common-env anchor).
+  # It has a web UI: add each arr (its URL + API key) in Clonarr's Settings, GUI-side.
+  # Config + the TRaSH cache live in appdata; nothing secret goes in the repo.
+  clonarr:
+    image: ghcr.io/prophetse7en/clonarr:latest
+    container_name: clonarr
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ:    ${TZ}
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:6060]
+      - net.unraid.docker.description=Clonarr - Sync TRaSH-Guides quality profiles & custom formats into Radarr/Sonarr
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/prophetse7en/clonarr/main/ui/static/icons/clonarr.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.clonarr.rule=Host(`clonarr.${ROOT_URL}`)"
+      - "traefik.http.services.clonarr.loadbalancer.server.port=6060"
+      - "traefik.http.routers.clonarr.entrypoints=websecure"
+      - "traefik.http.routers.clonarr.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.clonarr.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/clonarr:/config
+    ports:
+      - 6060:6060
+    depends_on:
+      - radarr-hd
+      - radarr-uhd
+      - sonarr-hd
+      - sonarr-uhd
+    networks:
+      - nestlab-proxy
+      - nestlab-download
     restart: unless-stopped
 
 networks:

@@ -1,4 +1,4 @@
-version: "3.9"
+name: downloaders
 
 x-common-env: &common-env
   PUID:  ${PUID}
@@ -38,8 +38,8 @@ services:
     container_name: qbittorrent
     environment:
       <<: *common-env
-      webui_port: 8081
-      torrenting_port: 6881
+      WEBUI_PORT: 8081
+      TORRENTING_PORT: 6881
     labels:
       - net.unraid.docker.webui=http://[IP]:[PORT:8081]
       - net.unraid.docker.description=qbittorrent - BitTorrent client
