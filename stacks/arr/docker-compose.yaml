@@ -119,7 +119,7 @@ services:
       - nestlab-download
     restart: unless-stopped
 
-  # bazarr containers (hd and uhd) uhd not required?
+  # bazarr containers (hd and uhd)
   bazarr-hd:
     image: lscr.io/linuxserver/bazarr:latest
     container_name: bazarr-hd
@@ -171,11 +171,10 @@ services:
     ports:
       - 6768:6767
     depends_on:
-      - nestlab-proxy
-      - nestlab-download
-      - nestlab-arr
+      - radarr-hd
+      - sonarr-hd
     networks:
-      - nestlab-arr
+      - nestlab-proxy
       - nestlab-download
     restart: unless-stopped
 
