@@ -38,16 +38,7 @@ services:
     networks:
       - nestlab-proxy
 
-  # ── reading & listening servers ─────────────────────────────────────────────
-  # audiobookshelf - the everyday audiobook + podcast + ebook library, with the
-  # nicest mobile apps. NOTE: LinuxServer does NOT ship audiobookshelf, so this uses
-  # the official advplyr image (listens on 80 internally, 13378 by convention on the
-  # host). It does NOT read PUID/PGID/UMASK, so it's pinned to ${PUID}:${PGID} with
-  # `user:` (no common-env anchor) to keep file ownership consistent with the media
-  # tree. It does NOT sync position between the ebook and the audiobook of a title
-  # (each format is a separate item with separate progress) - that gap is exactly what
-  # Storyteller fills, so the two are complementary: ABS for general listening + breadth
-  # (podcasts, single-format titles), Storyteller for read<->listen titles.
+  # audiobookshelf
   audiobookshelf:
     image: ghcr.io/advplyr/audiobookshelf:latest
     container_name: audiobookshelf
@@ -74,8 +65,7 @@ services:
       - nestlab-proxy
     restart: unless-stopped
 
-  # kavita - manga (webtoon / long-strip reader for manhwa) + ebooks. Reads CBZ
-  # and has solid EPUB support. Libraries point at media/manga and media/books.
+  # kavita
   kavita:
     image: lscr.io/linuxserver/kavita:latest
     container_name: kavita
@@ -101,11 +91,7 @@ services:
       - nestlab-proxy
     restart: unless-stopped
 
-  # komga - western-comics-first reader. Stronger ComicVine metadata scraping for
-  # floppies, which is why it runs alongside Kavita rather than collapsing into it.
-  # Library points at media/comics. NOTE: LinuxServer does NOT ship komga, so this uses
-  # the official gotson image (ghcr). It doesn't read PUID/PGID/UMASK, so it's pinned to
-  # ${PUID}:${PGID} with `user:` (no common-env anchor) to keep ownership consistent.
+  # komga
   komga:
     image: ghcr.io/gotson/komga:latest
     container_name: komga
@@ -131,16 +117,7 @@ services:
       - nestlab-proxy
     restart: unless-stopped
 
-  # storyteller - the read<->listen sync server (self-hosted Whispersync). Feed it
-  # the ebook AND the audiobook of the same title; it runs forced alignment
-  # (transcribes the narration and maps it to the text) so its iOS/Android apps let
-  # you switch between reading and listening with position carried across both. Its
-  # aligned library + DB live in appdata at /data - NOT the TRaSH media tree. Not an
-  # LSIO image: uses its own env scheme (honours PUID/PGID) plus STORYTELLER_SECRET_KEY.
-  # media is mounted read-only at /import so source files can be pulled into its
-  # uploader without leaving the box. Alignment is CPU-heavy per book (transcribes the
-  # whole audiobook once) - a burst on import, not a steady load; watch Unraid CPU
-  # headroom during batch imports.
+  # storyteller
   storyteller:
     image: registry.gitlab.com/storyteller-platform/storyteller:latest
     container_name: storyteller

@@ -243,12 +243,7 @@ services:
       - nestlab-proxy
     restart: unless-stopped
 
-  # clonarr - keeps the *arrs graded consistently by syncing TRaSH-Guides quality
-  # profiles + custom formats into them, so Remuxes / 3D are excluded by the profile
-  # instead of being fixed by hand (issue #5). It's not an LSIO image but it does
-  # honour PUID/PGID/TZ, so those are set explicitly (no UMASK -> no common-env anchor).
-  # It has a web UI: add each arr (its URL + API key) in Clonarr's Settings, GUI-side.
-  # Config + the TRaSH cache live in appdata; nothing secret goes in the repo.
+  # clonarr
   clonarr:
     image: ghcr.io/prophetse7en/clonarr:latest
     container_name: clonarr
@@ -281,14 +276,7 @@ services:
       - nestlab-download
     restart: unless-stopped
 
-  # ── books / audiobooks / comics acquisition ─────────────────────────────────
-  # bookshelf x2 - a maintained Readarr fork (ghcr.io/pennydreadful/bookshelf).
-  # Bookshelf handles one format per instance, so run two: ebooks and audiobooks,
-  # each with its own /config and its own root folder. The :hardcover tag ships
-  # working Hardcover metadata (fixes the dead-Readarr-backend problem, no extra
-  # proxy container). Honours PUID/PGID/UMASK, so it takes the common-env anchor.
-  # NOTE: MyAnonaMouse is configured GUI-side (Settings > Indexers > MyAnonaMouse,
-  # paste the mam_id session cookie) - it is NOT an env var, so nothing for it in .env.
+  # bookshelf x2
   bookshelf-ebooks:
     image: ghcr.io/pennydreadful/bookshelf:hardcover
     container_name: bookshelf-ebooks
@@ -297,6 +285,7 @@ services:
     labels:
       - net.unraid.docker.webui=http://[IP]:[PORT:8787]
       - net.unraid.docker.description=Bookshelf - Ebook collection manager (Readarr fork)
+      - net.unraid.docker.icon=https://github.com/pennydreadful/bookshelf/blob/develop/Logo/128.png?raw=true
       - "traefik.enable=true"
       - "traefik.http.routers.bookshelf-ebooks.rule=Host(`bookshelf-ebooks.${ROOT_URL}`)"
       - "traefik.http.services.bookshelf-ebooks.loadbalancer.server.port=8787"
@@ -322,6 +311,7 @@ services:
     labels:
       - net.unraid.docker.webui=http://[IP]:[PORT:8788]
       - net.unraid.docker.description=Bookshelf - Audiobook collection manager (Readarr fork)
+      - net.unraid.docker.icon=https://github.com/pennydreadful/bookshelf/blob/develop/Logo/128.png?raw=true
       - "traefik.enable=true"
       - "traefik.http.routers.bookshelf-audiobooks.rule=Host(`bookshelf-audiobooks.${ROOT_URL}`)"
       - "traefik.http.services.bookshelf-audiobooks.loadbalancer.server.port=8787"
@@ -339,12 +329,7 @@ services:
       - nestlab-download
     restart: unless-stopped
 
-  # mylar3 - western-comics acquisition (Sonarr-for-comics). LSIO image, so it
-  # takes the common-env anchor. Standard arr wiring: Prowlarr + SAB/qBit, hardlink
-  # + atomic move into media/comics. Host port 8091 (Mylar3's internal WebUI is 8090,
-  # but 8090 on the host is taken by zigbee2mqtt in the ha stack). NOTE: the ComicVine
-  # API key is entered GUI-side (Settings >
-  # ComicVine) and stored in mylar's config - it is NOT an env var, so nothing in .env.
+  # mylar3
   mylar3:
     image: lscr.io/linuxserver/mylar3:latest
     container_name: mylar3
@@ -371,14 +356,7 @@ services:
       - nestlab-download
     restart: unless-stopped
 
-  # suwayomi - manga / manhwa / manhua from source extensions. Deliberately OUTSIDE
-  # the TRaSH/hardlink model: no indexer, no download client, no intermediate copy -
-  # it pulls over HTTP and writes finished CBZ straight into media/manga (Kavita then
-  # reads it). proxy network ONLY - it needs internet egress to reach source
-  # extensions, not the arr/download network. Not an LSIO image and it does NOT read
-  # PUID/PGID, so it's pinned to ${PUID}:${PGID} with `user:` to keep CBZ ownership
-  # consistent with the rest of the media tree. Its downloads path is not configurable,
-  # so media/manga is bind-mounted onto the fixed downloads dir.
+  # suwayomi
   suwayomi:
     image: ghcr.io/suwayomi/suwayomi-server:stable
     container_name: suwayomi
@@ -406,6 +384,56 @@ services:
       - nestlab-proxy
     restart: unless-stopped
 
+  # rreading-glasses - self-hosted metadata proxy for the Bookshelf instances,
+  # replacing the shared/slow hardcover.bookinfo.pro. No web UI: Bookshelf reaches it
+  # at http://rreading-glasses:8788 (set as Metadata Source in each Bookshelf's dev
+  # settings). Needs a Hardcover token (RRG_HARDCOVER_AUTH, expires yearly Jan 1) and
+  # its own Postgres cache (sidecar below).
+  rreading-glasses:
+    image: blampe/rreading-glasses:hardcover
+    container_name: rreading-glasses
+    hostname: rreading-glasses
+    entrypoint: ["/main", "serve"]
+    command:
+      - --verbose
+    environment:
+      HARDCOVER_AUTH:    ${RRG_HARDCOVER_AUTH}
+      POSTGRES_HOST:     rreading-glasses-db
+      POSTGRES_DATABASE: rreading-glasses
+      POSTGRES_USER:     rreading-glasses
+      POSTGRES_PASSWORD: ${RRG_POSTGRES_PASSWORD}
+    labels:
+      - net.unraid.docker.description=rreading-glasses - Self-hosted book metadata proxy for Bookshelf
+    mem_limit: 128m
+    depends_on:
+      rreading-glasses-db:
+        condition: service_healthy
+    networks:
+      - nestlab-proxy
+      - rreading-glasses-net
+    restart: unless-stopped
+
+  # rreading-glasses-db - Postgres cache used only by rreading-glasses. Internal-only
+  # network, no host port. Creates its DB from these env vars on first run.
+  rreading-glasses-db:
+    image: postgres:17
+    container_name: rreading-glasses-db
+    hostname: rreading-glasses-db
+    environment:
+      POSTGRES_USER:     rreading-glasses
+      POSTGRES_PASSWORD: ${RRG_POSTGRES_PASSWORD}
+      POSTGRES_DB:       rreading-glasses
+    volumes:
+      - ${APPDATA_ROOT}/rreading-glasses-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rreading-glasses"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rreading-glasses-net
+    restart: unless-stopped
+
 networks:
   nestlab-proxy:
     external: true
@@ -413,3 +441,6 @@ networks:
   nestlab-download:
     external: true
     name: ${NET_DOWNLOAD}
+  rreading-glasses-net:
+    driver: bridge
+    internal: true
