@@ -341,8 +341,9 @@ services:
 
   # mylar3 - western-comics acquisition (Sonarr-for-comics). LSIO image, so it
   # takes the common-env anchor. Standard arr wiring: Prowlarr + SAB/qBit, hardlink
-  # + atomic move into media/comics. Host port 8090 is free here (qBittorrent is on
-  # 8081, not 8090). NOTE: the ComicVine API key is entered GUI-side (Settings >
+  # + atomic move into media/comics. Host port 8091 (Mylar3's internal WebUI is 8090,
+  # but 8090 on the host is taken by zigbee2mqtt in the ha stack). NOTE: the ComicVine
+  # API key is entered GUI-side (Settings >
   # ComicVine) and stored in mylar's config - it is NOT an env var, so nothing in .env.
   mylar3:
     image: lscr.io/linuxserver/mylar3:latest
@@ -350,7 +351,7 @@ services:
     environment:
       <<: *common-env
     labels:
-      - net.unraid.docker.webui=http://[IP]:[PORT:8090]
+      - net.unraid.docker.webui=http://[IP]:[PORT:8091]
       - net.unraid.docker.description=Mylar3 - Comic book collection manager
       - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/mylar3-logo.png
       - "traefik.enable=true"
@@ -364,7 +365,7 @@ services:
       - ${APPDATA_ROOT}/mylar3:/config
       - ${DATA_ROOT}:/data
     ports:
-      - 8090:8090
+      - 8091:8090
     networks:
       - nestlab-proxy
       - nestlab-download
