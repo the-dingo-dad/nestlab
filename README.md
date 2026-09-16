@@ -27,9 +27,9 @@ Each stack lives in its own sub-folder under [`stacks/`](stacks/), with a self-c
 | Stack | Services | What it does |
 |-------|----------|--------------|
 | **proxy** | Traefik, whoami | Reverse proxy + automatic Let's Encrypt TLS; the front door for everything |
-| **arr** | Radarr (HD + UHD), Sonarr (HD + UHD), Bazarr, Prowlarr, Seerr | The *arr suite — finds, grabs, renames and subtitles all the things |
+| **arr** | Radarr (HD + UHD), Sonarr (HD + UHD), Bazarr, Prowlarr, Seerr, Clonarr, Bookshelf (ebooks + audiobooks), Mylar3, Suwayomi | The *arr suite — finds, grabs, renames and subtitles all the things, now including books, audiobooks, comics and (via Suwayomi, off the download network) manga |
 | **downloaders** | SABnzbd, qBittorrent | Usenet + torrent clients feeding the *arrs |
-| **media** | Jellyfin | Playback, with hardware transcoding via `/dev/dri` |
+| **media** | Jellyfin, Audiobookshelf, Kavita, Komga, Storyteller | Playback, reading and listening — video (Jellyfin), audiobooks/podcasts/ebooks (Audiobookshelf), manga + ebooks (Kavita), western comics (Komga), and read↔listen sync (Storyteller) |
 | **ha** | Home Assistant, AppDaemon, ecowitt2mqtt, Zigbee2MQTT | Home automation brain + Zigbee bridge + weather station ingest |
 | **mqtt** | Mosquitto | The MQTT broker every smart-home thing gossips through |
 | **sql** | TimescaleDB, Telegraf | Time-series metrics — Telegraf sips MQTT, TimescaleDB stores it *(🚧 work in progress)* |

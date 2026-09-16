@@ -1,4 +1,4 @@
-version: "3.9"
+name: media
 
 x-common-env: &common-env
   PUID:  ${PUID}
@@ -37,6 +37,131 @@ services:
       - /dev/dri:/dev/dri
     networks:
       - nestlab-proxy
+
+  # ── reading & listening servers ─────────────────────────────────────────────
+  # audiobookshelf - the everyday audiobook + podcast + ebook library, with the
+  # nicest mobile apps. The LSIO image listens on 80 internally. It does NOT sync
+  # position between the ebook and the audiobook of a title (each format is a
+  # separate item with separate progress) - that gap is exactly what Storyteller
+  # fills, so the two are complementary: ABS for general listening + breadth
+  # (podcasts, single-format titles), Storyteller for read<->listen titles.
+  audiobookshelf:
+    image: lscr.io/linuxserver/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:13378]
+      - net.unraid.docker.description=Audiobookshelf - Audiobook, podcast & ebook server
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/audiobookshelf-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.audiobookshelf.rule=Host(`audiobookshelf.${ROOT_URL}`)"
+      - "traefik.http.services.audiobookshelf.loadbalancer.server.port=80"
+      - "traefik.http.routers.audiobookshelf.entrypoints=websecure"
+      - "traefik.http.routers.audiobookshelf.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.audiobookshelf.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/audiobookshelf:/config
+      - ${APPDATA_ROOT}/audiobookshelf/metadata:/metadata
+      - ${DATA_ROOT}/media:/data/media
+    ports:
+      - 13378:80
+    networks:
+      - nestlab-proxy
+    restart: unless-stopped
+
+  # kavita - manga (webtoon / long-strip reader for manhwa) + ebooks. Reads CBZ
+  # and has solid EPUB support. Libraries point at media/manga and media/books.
+  kavita:
+    image: lscr.io/linuxserver/kavita:latest
+    container_name: kavita
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:5000]
+      - net.unraid.docker.description=Kavita - Manga & ebook reader
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/kavita-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.kavita.rule=Host(`kavita.${ROOT_URL}`)"
+      - "traefik.http.services.kavita.loadbalancer.server.port=5000"
+      - "traefik.http.routers.kavita.entrypoints=websecure"
+      - "traefik.http.routers.kavita.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.kavita.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/kavita:/config
+      - ${DATA_ROOT}/media:/data/media
+    ports:
+      - 5000:5000
+    networks:
+      - nestlab-proxy
+    restart: unless-stopped
+
+  # komga - western-comics-first reader. Stronger ComicVine metadata scraping for
+  # floppies, which is why it runs alongside Kavita rather than collapsing into it.
+  # Library points at media/comics.
+  komga:
+    image: lscr.io/linuxserver/komga:latest
+    container_name: komga
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:25600]
+      - net.unraid.docker.description=Komga - Comics / western floppies reader
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/komga-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.komga.rule=Host(`komga.${ROOT_URL}`)"
+      - "traefik.http.services.komga.loadbalancer.server.port=25600"
+      - "traefik.http.routers.komga.entrypoints=websecure"
+      - "traefik.http.routers.komga.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.komga.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/komga:/config
+      - ${DATA_ROOT}/media:/data/media
+    ports:
+      - 25600:25600
+    networks:
+      - nestlab-proxy
+    restart: unless-stopped
+
+  # storyteller - the read<->listen sync server (self-hosted Whispersync). Feed it
+  # the ebook AND the audiobook of the same title; it runs forced alignment
+  # (transcribes the narration and maps it to the text) so its iOS/Android apps let
+  # you switch between reading and listening with position carried across both. Its
+  # aligned library + DB live in appdata at /data - NOT the TRaSH media tree. Not an
+  # LSIO image: uses its own env scheme (honours PUID/PGID) plus STORYTELLER_SECRET_KEY.
+  # media is mounted read-only at /import so source files can be pulled into its
+  # uploader without leaving the box. Alignment is CPU-heavy per book (transcribes the
+  # whole audiobook once) - a burst on import, not a steady load; watch Unraid CPU
+  # headroom during batch imports.
+  storyteller:
+    image: registry.gitlab.com/storyteller-platform/storyteller:latest
+    container_name: storyteller
+    environment:
+      PUID:                   ${PUID}
+      PGID:                   ${PGID}
+      TZ:                     ${TZ}
+      STORYTELLER_SECRET_KEY: ${STORYTELLER_SECRET_KEY}
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8001]
+      - net.unraid.docker.description=Storyteller - Synced ebook + audiobook reader (self-hosted Whispersync)
+      - "traefik.enable=true"
+      - "traefik.http.routers.storyteller.rule=Host(`storyteller.${ROOT_URL}`)"
+      - "traefik.http.services.storyteller.loadbalancer.server.port=8001"
+      - "traefik.http.routers.storyteller.entrypoints=websecure"
+      - "traefik.http.routers.storyteller.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.storyteller.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/storyteller:/data
+      - ${DATA_ROOT}/media:/import:ro
+    ports:
+      - 8001:8001
+    networks:
+      - nestlab-proxy
+    restart: unless-stopped
 
 
 networks:

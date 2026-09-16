@@ -281,6 +281,130 @@ services:
       - nestlab-download
     restart: unless-stopped
 
+  # ── books / audiobooks / comics acquisition ─────────────────────────────────
+  # bookshelf x2 - a maintained Readarr fork (ghcr.io/pennydreadful/bookshelf).
+  # Bookshelf handles one format per instance, so run two: ebooks and audiobooks,
+  # each with its own /config and its own root folder. The :hardcover tag ships
+  # working Hardcover metadata (fixes the dead-Readarr-backend problem, no extra
+  # proxy container). Honours PUID/PGID/UMASK, so it takes the common-env anchor.
+  # NOTE: MyAnonaMouse is configured GUI-side (Settings > Indexers > MyAnonaMouse,
+  # paste the mam_id session cookie) - it is NOT an env var, so nothing for it in .env.
+  bookshelf-ebooks:
+    image: ghcr.io/pennydreadful/bookshelf:hardcover
+    container_name: bookshelf-ebooks
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8787]
+      - net.unraid.docker.description=Bookshelf - Ebook collection manager (Readarr fork)
+      - "traefik.enable=true"
+      - "traefik.http.routers.bookshelf-ebooks.rule=Host(`bookshelf-ebooks.${ROOT_URL}`)"
+      - "traefik.http.services.bookshelf-ebooks.loadbalancer.server.port=8787"
+      - "traefik.http.routers.bookshelf-ebooks.entrypoints=websecure"
+      - "traefik.http.routers.bookshelf-ebooks.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.bookshelf-ebooks.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/bookshelf-ebooks:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 8787:8787
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  bookshelf-audiobooks:
+    image: ghcr.io/pennydreadful/bookshelf:hardcover
+    container_name: bookshelf-audiobooks
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8788]
+      - net.unraid.docker.description=Bookshelf - Audiobook collection manager (Readarr fork)
+      - "traefik.enable=true"
+      - "traefik.http.routers.bookshelf-audiobooks.rule=Host(`bookshelf-audiobooks.${ROOT_URL}`)"
+      - "traefik.http.services.bookshelf-audiobooks.loadbalancer.server.port=8787"
+      - "traefik.http.routers.bookshelf-audiobooks.entrypoints=websecure"
+      - "traefik.http.routers.bookshelf-audiobooks.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.bookshelf-audiobooks.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/bookshelf-audiobooks:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 8788:8787
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  # mylar3 - western-comics acquisition (Sonarr-for-comics). LSIO image, so it
+  # takes the common-env anchor. Standard arr wiring: Prowlarr + SAB/qBit, hardlink
+  # + atomic move into media/comics. Host port 8090 is free here (qBittorrent is on
+  # 8081, not 8090). NOTE: the ComicVine API key is entered GUI-side (Settings >
+  # ComicVine) and stored in mylar's config - it is NOT an env var, so nothing in .env.
+  mylar3:
+    image: lscr.io/linuxserver/mylar3:latest
+    container_name: mylar3
+    environment:
+      <<: *common-env
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:8090]
+      - net.unraid.docker.description=Mylar3 - Comic book collection manager
+      - net.unraid.docker.icon=https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/mylar3-logo.png
+      - "traefik.enable=true"
+      - "traefik.http.routers.mylar3.rule=Host(`mylar3.${ROOT_URL}`)"
+      - "traefik.http.services.mylar3.loadbalancer.server.port=8090"
+      - "traefik.http.routers.mylar3.entrypoints=websecure"
+      - "traefik.http.routers.mylar3.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.mylar3.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/mylar3:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - 8090:8090
+    networks:
+      - nestlab-proxy
+      - nestlab-download
+    restart: unless-stopped
+
+  # suwayomi - manga / manhwa / manhua from source extensions. Deliberately OUTSIDE
+  # the TRaSH/hardlink model: no indexer, no download client, no intermediate copy -
+  # it pulls over HTTP and writes finished CBZ straight into media/manga (Kavita then
+  # reads it). proxy network ONLY - it needs internet egress to reach source
+  # extensions, not the arr/download network. Not an LSIO image and it does NOT read
+  # PUID/PGID, so it's pinned to ${PUID}:${PGID} with `user:` to keep CBZ ownership
+  # consistent with the rest of the media tree. Its downloads path is not configurable,
+  # so media/manga is bind-mounted onto the fixed downloads dir.
+  suwayomi:
+    image: ghcr.io/suwayomi/suwayomi-server:stable
+    container_name: suwayomi
+    user: "${PUID}:${PGID}"
+    environment:
+      TZ:              ${TZ}
+      BIND_PORT:       "4567"
+      DOWNLOAD_AS_CBZ: "true"
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:4567]
+      - net.unraid.docker.description=Suwayomi - Manga / manhwa / manhua server
+      - "traefik.enable=true"
+      - "traefik.http.routers.suwayomi.rule=Host(`suwayomi.${ROOT_URL}`)"
+      - "traefik.http.services.suwayomi.loadbalancer.server.port=4567"
+      - "traefik.http.routers.suwayomi.entrypoints=websecure"
+      - "traefik.http.routers.suwayomi.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.suwayomi.middlewares=default-headers@file,local-only@file"
+      - "traefik.docker.network=${NET_PROXY}"
+    volumes:
+      - ${APPDATA_ROOT}/suwayomi:/home/suwayomi/.local/share/Tachidesk
+      - ${DATA_ROOT}/media/manga:/home/suwayomi/.local/share/Tachidesk/downloads
+    ports:
+      - 4567:4567
+    networks:
+      - nestlab-proxy
+    restart: unless-stopped
+
 networks:
   nestlab-proxy:
     external: true
