@@ -46,8 +46,7 @@ services:
       - "traefik.http.routers.whoami.rule=Host(`whoami.${ROOT_URL}`)"
       - "traefik.http.routers.whoami.entrypoints=websecure"
       - "traefik.http.routers.whoami.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.whoami.middlewares=default-headers@file,local-only@file"
-      # - "traefik.http.routers.whoami.middlewares=default-headers@file"
+      - "traefik.http.routers.whoami.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     networks:
       nestlab-proxy:

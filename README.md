@@ -106,11 +106,21 @@ for d in */; do ln -sf ../.env "${d}.env"; done
 #         docker network create -d macvlan -o parent=br0 --subnet 192.168.10.0/24 --gateway 192.168.10.1 nestlab-lan
 #    (repeat for the rest — see the "Networking" table for subnets/parents)
 
-# 5. Bring the stacks up — one folder at a time, each reads its symlinked .env
-for d in */; do (cd "$d" && docker compose up -d); done
+# 5. Bring everything up (infra first: proxy → mqtt → sql → ha → downloaders → arr → media)
+./up-all.sh
 ```
 
-Updating later is just `git pull` and re-running the `up -d` loop — Compose only recreates containers whose config actually changed.
+Updating later is just `git pull` and `./up-all.sh` again — Compose only recreates containers whose config actually changed.
+
+**Up/down helpers** (in `stacks/`):
+
+| Command | What it does |
+|---------|--------------|
+| `./up-all.sh` | `docker compose up -d` on every stack, in dependency order |
+| `./down-all.sh` | `docker compose down` on every stack, in reverse order (appdata + external networks untouched) |
+| `./up-all.sh arr media` | Just the named stacks — same for `down-all.sh` |
+
+Any new stack folder not in the scripts' `ORDER` list still gets picked up (brought up last, taken down first).
 
 > Deploying via **Portainer** instead of the CLI? Point it at each stack folder's `docker-compose.yaml` (under `stacks/<name>/`), make sure the symlinked `.env` is in place, and check the external networks already exist first — Portainer won't create them for you either.
 
@@ -125,6 +135,8 @@ nestlab/
 └── stacks/
     ├── .env.template                    # blueprint (committed, no secrets)
     ├── .env                             # real values (git-ignored), symlinked into each stack folder
+    ├── up-all.sh                        # compose up every stack (or the ones named)
+    ├── down-all.sh                      # compose down every stack (or the ones named)
     ├── proxy/docker-compose.yaml        # Traefik + whoami
     ├── arr/docker-compose.yaml          # Radarr / Sonarr / Bazarr / Prowlarr / Seerr
     ├── downloaders/docker-compose.yaml  # SABnzbd / qBittorrent

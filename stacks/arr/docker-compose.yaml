@@ -24,7 +24,7 @@ services:
       - "traefik.http.services.radarr-hd.loadbalancer.server.port=7878"
       - "traefik.http.routers.radarr-hd.entrypoints=websecure"
       - "traefik.http.routers.radarr-hd.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.radarr-hd.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.radarr-hd.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/radarr-hd:/config
@@ -52,7 +52,7 @@ services:
       - "traefik.http.services.radarr-uhd.loadbalancer.server.port=7878"
       - "traefik.http.routers.radarr-uhd.entrypoints=websecure"
       - "traefik.http.routers.radarr-uhd.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.radarr-uhd.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.radarr-uhd.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/radarr-uhd:/config
@@ -79,7 +79,7 @@ services:
       - "traefik.http.services.sonarr-hd.loadbalancer.server.port=8989"
       - "traefik.http.routers.sonarr-hd.entrypoints=websecure"
       - "traefik.http.routers.sonarr-hd.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.sonarr-hd.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.sonarr-hd.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/sonarr-hd:/config
@@ -110,7 +110,7 @@ services:
       - "traefik.http.services.sonarr-uhd.loadbalancer.server.port=8989"
       - "traefik.http.routers.sonarr-uhd.entrypoints=websecure"
       - "traefik.http.routers.sonarr-uhd.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.sonarr-uhd.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.sonarr-uhd.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     ports:
       - 8990:8989
@@ -134,7 +134,7 @@ services:
       - "traefik.http.services.bazarr-hd.loadbalancer.server.port=6767"
       - "traefik.http.routers.bazarr-hd.entrypoints=websecure"
       - "traefik.http.routers.bazarr-hd.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.bazarr-hd.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.bazarr-hd.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/bazarr-hd:/config
@@ -163,7 +163,7 @@ services:
       - "traefik.http.services.bazarr-uhd.loadbalancer.server.port=6767"
       - "traefik.http.routers.bazarr-uhd.entrypoints=websecure"
       - "traefik.http.routers.bazarr-uhd.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.bazarr-uhd.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.bazarr-uhd.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/bazarr-uhd:/config
@@ -193,7 +193,7 @@ services:
       - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
       - "traefik.http.routers.prowlarr.entrypoints=websecure"
       - "traefik.http.routers.prowlarr.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.prowlarr.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.prowlarr.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/prowlarr:/config
@@ -265,7 +265,7 @@ services:
       - "traefik.http.services.clonarr.loadbalancer.server.port=6060"
       - "traefik.http.routers.clonarr.entrypoints=websecure"
       - "traefik.http.routers.clonarr.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.clonarr.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.clonarr.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/clonarr:/config

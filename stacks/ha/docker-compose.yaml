@@ -59,7 +59,7 @@ services:
       - "traefik.http.services.appdaemon.loadbalancer.server.port=5050"
       - "traefik.http.routers.appdaemon.entrypoints=websecure"
       - "traefik.http.routers.appdaemon.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.appdaemon.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.appdaemon.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     ports:
       - 5050:5050
@@ -113,7 +113,7 @@ services:
       - "traefik.http.services.z2m.loadbalancer.server.port=8080"
       - "traefik.http.routers.z2m.entrypoints=websecure"
       - "traefik.http.routers.z2m.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.z2m.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.z2m.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     ports:
       - 8090:8080

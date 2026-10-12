@@ -21,7 +21,7 @@ services:
       - "traefik.http.services.sabnzbd.loadbalancer.server.port=8080"
       - "traefik.http.routers.sabnzbd.entrypoints=websecure"
       - "traefik.http.routers.sabnzbd.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.sabnzbd.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.sabnzbd.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/sabnzbd:/config
@@ -49,7 +49,7 @@ services:
       - "traefik.http.services.qbittorrent.loadbalancer.server.port=8081"
       - "traefik.http.routers.qbittorrent.entrypoints=websecure"
       - "traefik.http.routers.qbittorrent.tls.certresolver=mytlschallenge"
-      - "traefik.http.routers.qbittorrent.middlewares=default-headers@file,local-only@file"
+      - "traefik.http.routers.qbittorrent.middlewares=default-headers@file"
       - "traefik.docker.network=${NET_PROXY}"
     volumes:
       - ${APPDATA_ROOT}/qbittorrent:/config
