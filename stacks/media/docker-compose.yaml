@@ -1,4 +1,4 @@
-version: "3.9"
+name: media
 
 x-common-env: &common-env
   PUID:  ${PUID}

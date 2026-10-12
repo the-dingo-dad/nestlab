@@ -1,4 +1,4 @@
-version: "3.9"
+name: ha
 
 x-common-env: &common-env
   PUID:  ${PUID}

@@ -1,4 +1,5 @@
-version: "3.9"
+name: proxy
+
 services:
   traefik:
     image: "traefik:latest"
